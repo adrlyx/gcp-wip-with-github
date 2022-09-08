@@ -1,0 +1,63 @@
+name: GCPAuth
+
+# Start Action on push to branch main
+on:
+  push:
+    branches: [ "main" ]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+  
+    # Set permissions to be able to write id-token
+    permissions:
+      id-token: write
+      contents: read
+  
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check-out
+      - uses: actions/checkout@v3
+      
+      # Authenticate to Google Cloud with the WIP provider and a service account to impersonate
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v0'
+        with:
+          access_token_lifetime: 300s
+          # TODO: Change to your WIP
+          # 'projects/<project number>/locations/global/workloadIdentityPools/<pool-id>/providers/<provider-id>'
+          workload_identity_provider: ''
+          # TODO: Change to your service account to impersonate
+          # '<name>@<project-id>.iam.gserviceaccount.com'
+          service_account: ''
+
+      # Now you can run gcloud commands authenticated as the impersonated service account.
+      - id: 'gcloud'
+        name: 'gcloud'
+        run: |-
+          gcloud compute instances list
+    
+      # The token file is saved in github in the default variable GOOGLE_APPLICATION_CREDENTIALS
+      - name: Run a one-line script
+        run: cat $GOOGLE_APPLICATION_CREDENTIALS 
+
+      # Set up python for testing
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.9.10
+          architecture: x64
+          cache: 'pip'
+
+      # Install dependencies for python
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      # Execute a python program that authenticates with the WIP provider token and makes an API call
+      - name: Execute python program
+        run: |
+          python3 ./main.py
